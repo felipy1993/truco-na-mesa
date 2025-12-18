@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Truco na Mesa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            height: 100vh;
+            touch-action: manipulation;
+            transition: background 0.5s ease;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Temas de Mesa Clássicos */
+        .bg-leather {
+            background-color: #1a1a1a !important;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(20, 20, 20, 0.4) 0%, rgba(10, 10, 10, 0.9) 100%),
+                url('https://www.transparenttextures.com/patterns/black-leather.png') !important;
+        }
+        .bg-felt {
+            background-color: #0a3d1b !important;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.6) 100%),
+                url('https://www.transparenttextures.com/patterns/felt.png') !important;
+        }
+        .bg-wood {
+            background-color: #2a1a0a !important;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.7) 100%),
+                url('https://www.transparenttextures.com/patterns/wood-pattern.png') !important;
+        }
+        .bg-carbon {
+            background-color: #111111 !important;
+            background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png') !important;
+        }
+
+        /* Tema Mirassol - Link Direto Google Drive */
+        .bg-team-mir {
+            background-color: #000 !important;
+            background-image: url('https://lh3.googleusercontent.com/d/1b5DTEjKvSQ1KkhNuF4qZVJ1KEQqnbiU4') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) scale(1); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px) rotate(-1deg); }
+            20%, 40%, 60%, 80% { transform: translateX(4px) rotate(1deg); }
+        }
+        .animate-shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        button {
+            outline: none !important;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+</head>
+<body class="bg-team-mir flex flex-col items-center justify-center">
+    <div id="root" class="w-full h-full max-w-lg mx-auto flex flex-col"></div>
+</body>
+</html>
