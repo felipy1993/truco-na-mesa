@@ -1,84 +1,54 @@
 
-import { Menu, Info, BookOpen, RotateCcw, Trophy, Club, Heart, Minus, Plus, X, Volume2, VolumeX, Sparkles, Undo2, Spade, Diamond, Palette, Shield, Edit2, Image as ImageIcon, Link as LinkIcon, Upload, Eye, EyeOff, Sliders, Pipette, Maximize, Minimize } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, ModalType, WallpaperType } from './types';
+import { 
+  Menu, RotateCcw, Trophy, Minus, Plus, X, 
+  Volume2, VolumeX, Edit2, Maximize, Minimize, 
+  Eye, EyeOff, Palette, Sliders, ChevronRight
+} from 'lucide-react';
+import { GameState, ModalType } from './types.ts';
 
 const INITIAL_STATE: GameState = {
-  nos: { name: 'Nós', points: 0, wins: 0 },
-  eles: { name: 'Eles', points: 0, wins: 0 }
+  nos: { name: 'NÓS', points: 0, wins: 0 },
+  eles: { name: 'ELES', points: 0, wins: 0 }
 };
 
-const TEXT_COLORS = [
-  { name: 'Neon Verde', value: '#39ff14' },
+const NEON_COLORS = [
+  { name: 'Lima', value: '#bef264' },
+  { name: 'Ciano', value: '#22d3ee' },
+  { name: 'Rosa', value: '#f472b6' },
+  { name: 'Amarelo', value: '#fde047' },
+  { name: 'Roxo', value: '#c084fc' },
+  { name: 'Laranja', value: '#fb923c' },
+  { name: 'Vermelho', value: '#f87171' },
   { name: 'Branco', value: '#ffffff' },
-  { name: 'Neon Ciano', value: '#00ffff' },
-  { name: 'Neon Rosa', value: '#ff00ff' },
-  { name: 'Neon Roxo', value: '#bc13fe' },
-  { name: 'Neon Amarelo', value: '#ccff00' },
-  { name: 'Neon Laranja', value: '#ffad00' },
-  { name: 'Neon Vermelho', value: '#ff3131' },
-  { name: 'Preto', value: '#000000' },
-  { name: 'Grafite', value: '#27272a' },
-  { name: 'Marinho', value: '#1e3a8a' },
-  { name: 'Musgo', value: '#064e3b' },
 ];
 
 const App: React.FC = () => {
   const [game, setGame] = useState<GameState>(() => {
-    try {
-      const saved = localStorage.getItem('truco-na-mesa-state');
-      return saved ? JSON.parse(saved) : INITIAL_STATE;
-    } catch {
-      return INITIAL_STATE;
-    }
+    const saved = localStorage.getItem('truco_v1_state');
+    return saved ? JSON.parse(saved) : INITIAL_STATE;
   });
 
-  const [wallpaper, setWallpaper] = useState<WallpaperType>(() => {
-    try {
-      return (localStorage.getItem('truco-na-mesa-wallpaper') as WallpaperType) || 'team-mir';
-    } catch {
-      return 'team-mir';
-    }
-  });
-
-  const [textColor, setTextColor] = useState(() => {
-    try {
-      return localStorage.getItem('truco-na-mesa-text-color') || '#39ff14';
-    } catch {
-      return '#39ff14';
-    }
-  });
-
-  const [uiOpacity, setUiOpacity] = useState(() => {
-    try {
-      const saved = localStorage.getItem('truco-na-mesa-opacity');
-      return saved ? Math.max(0.1, parseFloat(saved)) : 0.8;
-    } catch {
-      return 0.8;
-    }
-  });
-
-  const [tempHide, setTempHide] = useState(false);
+  const [textColor, setTextColor] = useState(() => localStorage.getItem('truco_v1_color') || '#bef264');
+  const [uiOpacity, setUiOpacity] = useState(() => parseFloat(localStorage.getItem('truco_v1_opacity') || '0.9'));
+  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('truco_v1_muted') === 'true');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [modal, setModal] = useState<ModalType>('none');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isTrucoShaking, setIsTrucoShaking] = useState(false);
+  const [modal, setModal] = useState<ModalType>('none');
   const [handValue, setHandValue] = useState<number>(1);
-  const [lastWinner, setLastWinner] = useState<'nos' | 'eles' | null>(null);
+  const [isTrucoAnimating, setIsTrucoAnimating] = useState(false);
   const [editingTeam, setEditingTeam] = useState<'nos' | 'eles' | null>(null);
   const [tempName, setTempName] = useState('');
-  
-  const [isMuted, setIsMuted] = useState(() => {
-    try {
-      const saved = localStorage.getItem('truco-na-mesa-muted');
-      return saved ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+  const [tempHide, setTempHide] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem('truco_v1_state', JSON.stringify(game));
+    localStorage.setItem('truco_v1_color', textColor);
+    localStorage.setItem('truco_v1_opacity', uiOpacity.toString());
+    localStorage.setItem('truco_v1_muted', isMuted.toString());
+  }, [game, textColor, uiOpacity, isMuted]);
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -89,364 +59,275 @@ const App: React.FC = () => {
     }
   };
 
-  const playSound = useCallback((type: 'plus' | 'minus' | 'truco' | 'win') => {
+  const playSound = (freq: number, duration: number, type: OscillatorType = 'sine') => {
     if (isMuted) return;
     initAudio();
     const ctx = audioCtxRef.current;
     if (!ctx) return;
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
     osc.connect(gain);
     gain.connect(ctx.destination);
-
-    const now = ctx.currentTime;
-
-    switch (type) {
-      case 'plus':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
-        break;
-      case 'minus':
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
-        break;
-      case 'truco':
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.2);
-        gain.gain.setValueAtTime(0.05, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.2);
-        break;
-      case 'win':
-        // Arpeggio simples
-        [440, 554, 659, 880].forEach((freq, i) => {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'triangle';
-          o.frequency.setValueAtTime(freq, now + (i * 0.1));
-          g.gain.setValueAtTime(0.1, now + (i * 0.1));
-          g.gain.exponentialRampToValueAtTime(0.01, now + (i * 0.1) + 0.3);
-          o.connect(g);
-          g.connect(ctx.destination);
-          o.start(now + (i * 0.1));
-          o.stop(now + (i * 0.1) + 0.3);
-        });
-        break;
-    }
-  }, [isMuted]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('truco-na-mesa-state', JSON.stringify(game));
-      localStorage.setItem('truco-na-mesa-muted', JSON.stringify(isMuted));
-      localStorage.setItem('truco-na-mesa-opacity', uiOpacity.toString());
-      localStorage.setItem('truco-na-mesa-text-color', textColor);
-      localStorage.setItem('truco-na-mesa-wallpaper', wallpaper);
-    } catch (e) {
-      console.warn("LocalStorage storage failed", e);
-    }
-  }, [game, isMuted, uiOpacity, textColor, wallpaper]);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement));
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    
-    const autoEnterFullscreen = () => {
-      const docEl = document.documentElement as any;
-      const request = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
-      if (request && !document.fullscreenElement) {
-        request.call(docEl).catch(() => {});
-      }
-      document.removeEventListener('click', autoEnterFullscreen);
-      document.removeEventListener('touchstart', autoEnterFullscreen);
-    };
-
-    document.addEventListener('click', autoEnterFullscreen);
-    document.addEventListener('touchstart', autoEnterFullscreen);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('click', autoEnterFullscreen);
-      document.removeEventListener('touchstart', autoEnterFullscreen);
-    };
-  }, []);
-
-  const toggleFullscreen = () => {
-    initAudio();
-    const docEl = document.documentElement as any;
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      const request = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
-      if (request) request.call(docEl).catch(console.error);
-    } else {
-      const exit = document.exitFullscreen || (document as any).webkitExitFullscreen || (document as any).msExitFullscreen;
-      if (exit) exit.call(document).catch(console.error);
-    }
-    vibrate(20);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
   };
 
-  const vibrate = useCallback((pattern: number | number[] = 50) => {
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try { navigator.vibrate(pattern); } catch {}
-    }
-  }, []);
-
-  const toggleTempHide = () => {
-    initAudio();
-    setTempHide(true);
-    vibrate(10);
-    setTimeout(() => setTempHide(false), 3000);
+  // Fix: Allow vibrate to accept a number or a pattern array to fix line 92
+  const vibrate = (pattern: number | number[] = 40) => {
+    if ('vibrate' in navigator) navigator.vibrate(pattern);
   };
 
   const updatePoints = (team: 'nos' | 'eles', delta: number) => {
     initAudio();
+    const amount = delta > 0 ? handValue : -1;
+    
     setGame(prev => {
-      const amount = delta > 0 ? handValue : delta;
       const newPoints = Math.max(0, prev[team].points + amount);
       
       if (newPoints >= 12) {
-        vibrate([200, 100, 200]);
-        playSound('win');
-        setLastWinner(team);
+        playSound(880, 0.5, 'triangle');
+        vibrate([100, 50, 100]);
         setHandValue(1);
-        setTimeout(() => setLastWinner(null), 4000);
-
         return {
           ...prev,
           nos: { ...prev.nos, points: 0, wins: team === 'nos' ? prev.nos.wins + 1 : prev.nos.wins },
           eles: { ...prev.eles, points: 0, wins: team === 'eles' ? prev.eles.wins + 1 : prev.eles.wins }
         };
       }
-      
-      vibrate(40);
-      playSound(delta > 0 ? 'plus' : 'minus');
-      
-      if (delta > 0) setHandValue(1); 
+
+      playSound(delta > 0 ? 440 + (newPoints * 20) : 220, 0.1);
+      vibrate();
+      if (delta > 0) setHandValue(1);
       return { ...prev, [team]: { ...prev[team], points: newPoints } };
     });
   };
 
-  const getGlowStyle = (color: string, intensity: number = 0.5) => {
-    const isDark = ['#000000', '#27272a', '#1e3a8a', '#064e3b'].includes(color);
-    if (isDark) return { color };
-    return {
-      color,
-      textShadow: `0 0 ${10 * intensity}px ${color}aa, 0 0 ${20 * intensity}px ${color}66`
-    };
+  const toggleTruco = () => {
+    initAudio();
+    const values: Record<number, number> = { 1: 3, 3: 6, 6: 9, 9: 12, 12: 1 };
+    const next = values[handValue];
+    setHandValue(next);
+    if (next > 1) {
+      setIsTrucoAnimating(true);
+      playSound(150, 0.3, 'sawtooth');
+      vibrate(80);
+      setTimeout(() => setIsTrucoAnimating(false), 500);
+    } else {
+      vibrate(20);
+    }
   };
 
-  const effectiveOpacity = tempHide ? 0.05 : uiOpacity;
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const getGlow = (color: string, intensity: number = 1) => ({
+    color: color,
+    textShadow: `0 0 ${8 * intensity}px ${color}88, 0 0 ${16 * intensity}px ${color}44`
+  });
+
+  const activeOpacity = tempHide ? 0.05 : uiOpacity;
 
   return (
-    <div className={`flex flex-col h-full w-full p-4 pt-[var(--safe-top)] pb-[var(--safe-bottom)] relative font-sans select-none overflow-hidden transition-all duration-700 text-white`}>
+    <div className="flex flex-col h-full w-full p-4 pt-[var(--safe-top)] pb-[var(--safe-bottom)] transition-all duration-700 bg-transparent text-white overflow-hidden">
       
       {/* Header */}
-      <header className="flex items-center justify-between mb-2 px-2 shrink-0 transition-opacity duration-500" style={{ opacity: effectiveOpacity + 0.2 }}>
-        <button onClick={() => { initAudio(); setIsMenuOpen(true); }} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-black/90 border border-white/20 active:scale-90 transition-all shadow-xl">
+      <header className="flex items-center justify-between mb-4 z-10 transition-opacity duration-500" style={{ opacity: activeOpacity }}>
+        <button onClick={() => { initAudio(); setIsMenuOpen(true); vibrate(20); }} className="p-3 bg-white/5 neo-blur rounded-2xl border border-white/10 active:scale-90 transition-transform">
           <Menu size={24} style={{ color: textColor }} />
         </button>
-        <div className="text-center px-6 py-2 bg-black/90 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl" onClick={toggleTempHide}>
-          <h1 className="text-lg font-black tracking-[0.2em] uppercase leading-none" style={getGlowStyle(textColor, 1.0)}>Truco na Mesa</h1>
-          <p className="text-[8px] font-bold opacity-70 uppercase tracking-[0.3em] mt-1" style={{ color: textColor }}>Toque para ocultar UI</p>
+        
+        <div className="flex flex-col items-center" onClick={() => { setTempHide(true); setTimeout(() => setTempHide(false), 3000); }}>
+          <h1 className="text-xl font-black tracking-tighter uppercase italic" style={getGlow(textColor)}>TRUCO PRO</h1>
+          <div className="flex gap-1 mt-1">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: textColor, opacity: 0.3 }} />
+            ))}
+          </div>
         </div>
+
         <div className="flex gap-2">
-          <button onClick={toggleFullscreen} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-black/90 border border-white/20 active:scale-90 transition-all shadow-xl">
+           <button onClick={toggleFullscreen} className="p-3 bg-white/5 neo-blur rounded-2xl border border-white/10 active:scale-90 transition-transform">
             {isFullscreen ? <Minimize size={20} style={{ color: textColor }} /> : <Maximize size={20} style={{ color: textColor }} />}
-          </button>
-          <button onClick={toggleTempHide} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-black/90 border border-white/20 active:scale-90 transition-all shadow-xl">
-            <Eye size={20} style={{ color: textColor }} />
           </button>
         </div>
       </header>
 
-      {/* Placar Area */}
-      <main className="flex-1 flex flex-col min-h-0 transition-all duration-500" style={{ opacity: effectiveOpacity }}>
-        <div className="flex-1 grid grid-cols-2 gap-2 items-stretch py-2 min-h-0">
-          {(['nos', 'eles'] as const).map((team) => {
-            const isWinner = lastWinner === team;
-            return (
-              <div key={team} className={`flex flex-col items-center justify-between transition-all duration-500 relative bg-transparent py-2 ${isWinner ? 'scale-[1.05]' : ''}`}>
-                <div className="flex flex-col items-center gap-2 w-full px-2 z-10">
-                  <button 
-                    onClick={() => { initAudio(); setEditingTeam(team); setTempName(game[team].name); }} 
-                    className="flex items-center gap-1.5 px-4 py-2 bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg w-full justify-center"
-                  >
-                    <h2 className="text-[10px] font-black tracking-widest uppercase truncate" style={getGlowStyle(textColor, 0.4)}>{game[team].name}</h2>
-                    <Edit2 size={10} style={{ color: textColor, opacity: 0.8 }} />
-                  </button>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-black/90 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
-                    <Trophy size={12} className="text-yellow-500" />
-                    <span className="text-[10px] font-black tabular-nums" style={getGlowStyle(textColor, 0.4)}>{game[team].wins}</span>
-                  </div>
-                </div>
-                <div className="relative z-10 group flex items-center justify-center my-4">
-                  <div className={`bg-black/80 backdrop-blur-2xl rounded-full w-32 h-32 flex items-center justify-center shadow-[0_15px_35px_rgba(0,0,0,0.9)] border-2 transition-all duration-300 ${isWinner ? 'border-yellow-500 animate-pulse' : 'border-white/5'}`}>
-                    <span className={`text-7xl font-black tabular-nums transition-all duration-300`} style={getGlowStyle(isWinner ? '#fbbf24' : textColor, 1.6)}>
-                      {game[team].points}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 w-full px-2 z-10">
-                  <button onClick={() => updatePoints(team, 1)} className="w-full py-8 rounded-[2rem] bg-black/90 backdrop-blur-xl border border-white/10 flex items-center justify-center active:scale-95 active:bg-white/10 transition-all shadow-2xl relative overflow-hidden group">
-                    <span className="text-3xl font-black" style={getGlowStyle(textColor, 1.0)}>+{handValue}</span>
-                  </button>
-                  <button onClick={() => updatePoints(team, -1)} disabled={game[team].points === 0} className="w-full py-3 bg-black/80 backdrop-blur-sm rounded-xl border border-white/5 flex items-center justify-center active:bg-red-500/40 disabled:opacity-10 transition-all shadow-xl">
-                    <Minus size={14} style={{ color: textColor }} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Main Scoreboard */}
+      <main className="flex-1 grid grid-cols-2 gap-4 transition-all duration-500" style={{ opacity: activeOpacity }}>
+        {(['nos', 'eles'] as const).map(team => (
+          <div key={team} className="flex flex-col items-center justify-between bg-white/[0.03] neo-blur rounded-[2.5rem] border border-white/5 p-4 py-8 relative">
+            <button 
+              onClick={() => { setEditingTeam(team); setTempName(game[team].name); }}
+              className="flex items-center gap-2 px-4 py-2 bg-black/40 rounded-full border border-white/10 active:scale-95 transition-all"
+            >
+              <span className="text-[10px] font-bold tracking-[0.2em] uppercase truncate max-w-[80px]">{game[team].name}</span>
+              <Edit2 size={10} className="opacity-50" />
+            </button>
 
-        <div className="mt-4 flex flex-col gap-3 shrink-0">
-          <button 
-            onClick={() => {
-              initAudio();
-              setIsTrucoShaking(true);
-              const nextValues: Record<number, number> = { 1: 3, 3: 6, 6: 9, 9: 12 };
-              setHandValue(nextValues[handValue] || 1);
-              vibrate(60);
-              playSound('truco');
-              setTimeout(() => setIsTrucoShaking(false), 500);
-            }}
-            disabled={handValue === 12}
-            className={`w-full py-6 rounded-[2rem] border-2 transition-all active:scale-95 flex items-center justify-center gap-4 relative overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,1)] ${isTrucoShaking ? 'animate-shake' : ''} ${handValue === 1 ? 'border-white/20 bg-black/95' : 'border-orange-500 bg-orange-950/95'}`}
-          >
-            <span className="text-3xl font-black italic uppercase tracking-tighter" style={handValue === 1 ? getGlowStyle(textColor, 1.2) : { color: '#ffffff', textShadow: '0 0 25px #ffad00' }}>
-              {handValue === 1 ? 'TRUUUCO!' : `VALE ${handValue}`}
-            </span>
-          </button>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => { initAudio(); setModal('reset-points'); }} className="py-4 bg-black/90 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest active:bg-white/10 transition-all shadow-xl" style={getGlowStyle(textColor, 0.6)}>
-              Zerar Pontos
-            </button>
-            <button onClick={() => { initAudio(); setIsMuted(!isMuted); }} className="py-4 bg-black/90 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest active:bg-white/10 transition-all flex items-center justify-center gap-2 shadow-xl" style={getGlowStyle(textColor, 0.6)}>
-              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />} Som
-            </button>
+            <div className="flex flex-col items-center my-6">
+              <div className="text-7xl font-black tabular-nums transition-all duration-300" style={getGlow(textColor, 1.5)}>
+                {game[team].points}
+              </div>
+              <div className="flex items-center gap-2 mt-4 px-3 py-1 bg-white/5 rounded-full">
+                <Trophy size={12} className="text-yellow-500" />
+                <span className="text-xs font-bold tabular-nums opacity-80">{game[team].wins}</span>
+              </div>
+            </div>
+
+            <div className="w-full space-y-3">
+              <button 
+                onClick={() => updatePoints(team, 1)}
+                className="w-full py-8 bg-white/10 rounded-[2rem] border border-white/10 active:bg-white/20 active:scale-95 transition-all flex items-center justify-center"
+              >
+                <Plus size={32} style={{ color: textColor }} />
+              </button>
+              <button 
+                onClick={() => updatePoints(team, -1)}
+                disabled={game[team].points === 0}
+                className="w-full py-3 bg-black/40 rounded-2xl border border-white/5 active:bg-red-500/20 disabled:opacity-20 transition-all flex items-center justify-center"
+              >
+                <Minus size={18} />
+              </button>
+            </div>
           </div>
-        </div>
+        ))}
       </main>
 
-      {/* Side Menu */}
+      {/* Bottom Controls */}
+      <footer className="mt-6 flex flex-col gap-4 transition-opacity duration-500" style={{ opacity: activeOpacity }}>
+        <button 
+          onClick={toggleTruco}
+          className={`w-full py-6 rounded-[2.5rem] border-2 transition-all active:scale-95 flex items-center justify-center relative overflow-hidden ${isTrucoAnimating ? 'animate-truco' : ''} ${handValue > 1 ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 bg-white/5'}`}
+        >
+          <span className={`text-3xl font-black italic uppercase tracking-tighter ${handValue > 1 ? 'text-orange-500' : ''}`} style={handValue === 1 ? getGlow(textColor) : {}}>
+            {handValue === 1 ? 'TRUCO!' : `VALE ${handValue}`}
+          </span>
+          {handValue > 1 && <div className="absolute inset-0 bg-orange-500/10 animate-pulse" />}
+        </button>
+
+        <div className="grid grid-cols-3 gap-3">
+          <button onClick={() => setModal('reset-points')} className="flex flex-col items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/5 active:bg-white/10">
+            <RotateCcw size={20} className="mb-1 opacity-60" />
+            <span className="text-[8px] font-bold uppercase tracking-widest">Zerar</span>
+          </button>
+          <button onClick={() => setIsMuted(!isMuted)} className="flex flex-col items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/5 active:bg-white/10">
+            {isMuted ? <VolumeX size={20} className="mb-1 text-red-400" /> : <Volume2 size={20} className="mb-1 text-green-400" />}
+            <span className="text-[8px] font-bold uppercase tracking-widest">Som</span>
+          </button>
+          <button onClick={() => setTempHide(!tempHide)} className="flex flex-col items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/5 active:bg-white/10">
+             <EyeOff size={20} className="mb-1 opacity-60" />
+            <span className="text-[8px] font-bold uppercase tracking-widest">Eco</span>
+          </button>
+        </div>
+      </footer>
+
+      {/* Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="w-80 bg-black h-full p-8 shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col border-r border-white/20 animate-[slideIn_0.3s_ease-out] relative z-20 text-white">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-black uppercase tracking-widest">Ajustes</h3>
-              <button onClick={() => setIsMenuOpen(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 flex animate-in fade-in duration-300">
+          <div className="w-4/5 max-w-sm bg-zinc-950 h-full p-8 border-r border-white/10 shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-xl font-black tracking-tight">AJUSTES</h2>
+              <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-white/5 rounded-full"><X size={20}/></button>
             </div>
-            
-            <div className="space-y-6 flex-1 overflow-y-auto pr-2 scrollbar-hide">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Palette size={14} className="text-pink-400" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Cores Neon</span>
+
+            <div className="space-y-8 flex-1 overflow-y-auto pr-2">
+              <section>
+                <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest opacity-50">
+                  <Palette size={14} /> Cor do Neon
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {TEXT_COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => { setTextColor(color.value); vibrate(20); initAudio(); }}
-                      className={`aspect-square rounded-full border-2 transition-all ${textColor === color.value ? 'border-white scale-110' : 'border-transparent opacity-60'}`}
-                      style={{ backgroundColor: color.value }}
+                <div className="grid grid-cols-4 gap-3">
+                  {NEON_COLORS.map(c => (
+                    <button 
+                      key={c.value}
+                      onClick={() => setTextColor(c.value)}
+                      className={`aspect-square rounded-full border-2 transition-all ${textColor === c.value ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-40'}`}
+                      style={{ backgroundColor: c.value }}
                     />
                   ))}
                 </div>
-              </div>
+              </section>
 
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sliders size={14} className="text-blue-400" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Contraste UI</span>
+              <section>
+                <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest opacity-50">
+                  <Sliders size={14} /> Opacidade UI
                 </div>
                 <input 
-                  type="range" min="0.1" max="1.0" step="0.05"
-                  value={uiOpacity} 
-                  onChange={(e) => setUiOpacity(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  type="range" min="0.2" max="1.0" step="0.1" 
+                  value={uiOpacity} onChange={e => setUiOpacity(parseFloat(e.target.value))}
+                  className="w-full"
                 />
-              </div>
+              </section>
 
-              <div className="space-y-2">
-                <button onClick={() => { setGame(prev => ({ ...prev, nos: { ...prev.nos, wins: 0 }, eles: { ...prev.eles, wins: 0 } })); setIsMenuOpen(false); vibrate(30); initAudio(); }} className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
-                  Zerar Vitórias
-                </button>
-                <button onClick={() => { setGame(INITIAL_STATE); setHandValue(1); setIsMenuOpen(false); vibrate(50); initAudio(); }} className="w-full p-4 bg-red-600/20 border border-red-500/30 rounded-xl text-red-500 text-[10px] font-black uppercase flex items-center justify-center gap-2 shadow-lg">
-                  <RotateCcw size={14} /> Reiniciar Tudo
-                </button>
+              <div className="pt-6 space-y-3">
+                <button onClick={() => { setGame(prev => ({...prev, nos: {...prev.nos, wins: 0}, eles: {...prev.eles, wins: 0}})); setIsMenuOpen(false); vibrate(50); }} className="w-full py-4 bg-white/5 rounded-xl text-[10px] font-bold uppercase border border-white/5">Zerar Placar de Vitórias</button>
+                <button onClick={() => { setGame(INITIAL_STATE); setHandValue(1); setIsMenuOpen(false); vibrate(100); }} className="w-full py-4 bg-red-500/20 text-red-400 rounded-xl text-[10px] font-bold uppercase border border-red-500/20">Reiniciar App</button>
               </div>
             </div>
+            
+            <div className="mt-auto pt-6 text-center opacity-20 text-[10px] font-mono italic">
+              TRUCO NA MESA v1.0
+            </div>
           </div>
-          <div className="flex-1 bg-black/80 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
         </div>
       )}
 
       {/* Edit Name Modal */}
       {editingTeam && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl">
-          <div className="bg-zinc-900 p-8 rounded-[3rem] w-full max-w-xs border border-white/20 shadow-2xl">
-            <h4 className="text-sm font-black uppercase mb-6 text-center tracking-widest">Nome do Time</h4>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md animate-in zoom-in duration-200">
+          <div className="bg-zinc-900 p-8 rounded-[2.5rem] w-full max-w-xs border border-white/10 shadow-2xl">
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-6 opacity-50 text-center">Editar Nome</h3>
             <input 
-              ref={inputRef} type="text" value={tempName} 
-              onChange={e => setTempName(e.target.value)} 
-              className="w-full bg-black border border-white/30 rounded-2xl py-4 text-center font-bold text-xl text-white mb-8 outline-none focus:border-blue-500 shadow-inner" 
-              maxLength={12}
+              autoFocus
+              type="text" 
+              value={tempName} 
+              onChange={e => setTempName(e.target.value.toUpperCase())}
+              className="w-full bg-black/50 border border-white/10 rounded-2xl py-5 text-center text-2xl font-black mb-8 focus:border-blue-500 outline-none"
+              maxLength={10}
             />
-            <button 
-              onClick={() => { initAudio(); setGame(prev => ({ ...prev, [editingTeam!]: { ...prev[editingTeam!], name: tempName || (editingTeam === 'nos' ? 'Nós' : 'Eles') } })); setEditingTeam(null); }}
-              className="w-full py-5 bg-blue-600 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-            >Salvar</button>
-          </div>
-        </div>
-      )}
-
-      {/* Reset Modal */}
-      {modal !== 'none' && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-6 bg-black/98 backdrop-blur-2xl">
-          <div className="bg-zinc-900 p-10 rounded-[3.5rem] w-full max-w-xs border border-white/20 text-center shadow-[0_0_100px_rgba(0,0,0,1)]">
-            <h3 className="text-xl font-black mb-8 uppercase tracking-tight">Zerar Partida?</h3>
-            <div className="flex flex-col gap-4">
-              <button onClick={() => { initAudio(); setGame(prev => ({ ...prev, nos: { ...prev.nos, points: 0 }, eles: { ...prev.eles, points: 0 } })); setHandValue(1); setModal('none'); }} className="w-full py-5 bg-red-600 rounded-2xl font-black uppercase text-lg shadow-xl active:scale-95 transition-all">Sim, Zerar</button>
-              <button onClick={() => { initAudio(); setModal('none'); }} className="w-full py-5 text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Cancelar</button>
+            <div className="flex gap-3">
+              <button onClick={() => setEditingTeam(null)} className="flex-1 py-4 bg-white/5 rounded-2xl text-[10px] font-bold uppercase">Cancelar</button>
+              <button onClick={() => {
+                setGame(prev => ({ ...prev, [editingTeam]: { ...prev[editingTeam], name: tempName || (editingTeam === 'nos' ? 'NÓS' : 'ELES') } }));
+                setEditingTeam(null);
+              }} className="flex-1 py-4 bg-blue-600 rounded-2xl text-[10px] font-bold uppercase">Salvar</button>
             </div>
           </div>
         </div>
       )}
 
-      <style>{`
-        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        input[type=range]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: #3b82f6;
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-          cursor: pointer;
-          border: 2px solid white;
-        }
-      `}</style>
+      {/* Confirm Reset Modal */}
+      {modal === 'reset-points' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md animate-in zoom-in duration-200">
+          <div className="bg-zinc-900 p-8 rounded-[2.5rem] w-full max-w-xs border border-white/10 text-center shadow-2xl">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <RotateCcw className="text-red-500" size={32} />
+            </div>
+            <h3 className="text-lg font-black uppercase mb-2">Zerar Pontos?</h3>
+            <p className="text-xs opacity-50 mb-8">Isso limpará os pontos da rodada atual mas manterá as vitórias.</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={() => {
+                setGame(prev => ({...prev, nos: {...prev.nos, points: 0}, eles: {...prev.eles, points: 0}}));
+                setHandValue(1);
+                setModal('none');
+                vibrate(20);
+              }} className="w-full py-5 bg-red-600 rounded-2xl font-black uppercase text-xs">Sim, Limpar</button>
+              <button onClick={() => setModal('none')} className="w-full py-4 text-xs font-bold uppercase opacity-40">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
