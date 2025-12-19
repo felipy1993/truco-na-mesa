@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 import { GameState, ModalType } from './types';
 import { useAudio } from './hooks/useAudio';
 import { useWakeLock } from './hooks/useWakeLock';
+import confetti from 'canvas-confetti';
 import { ScoreCard } from './components/ScoreCard';
 import { TrucoButton } from './components/TrucoButton';
 import { SettingsMenu } from './components/SettingsMenu';
@@ -48,9 +49,23 @@ const App: React.FC = () => {
       const newPoints = Math.max(0, prev[team].points + amount);
       
       if (newPoints >= 12) {
-        playTone(880, 0.5, 'triangle');
-        vibrate([100, 50, 100]);
+        // Victory Fanfare
+        playTone(523.25, 0.1, 'square'); // C5
+        setTimeout(() => playTone(659.25, 0.1, 'square'), 100); // E5
+        setTimeout(() => playTone(783.99, 0.1, 'square'), 200); // G5
+        setTimeout(() => playTone(1046.50, 0.4, 'square'), 300); // C6
+        
+        vibrate([100, 50, 100, 50, 200]);
         speak('Vitória!');
+        
+        // Confetti Explosion
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#bef264', '#ffffff', '#22d3ee', '#f472b6']
+        });
+
         setHandValue(1);
         return {
           ...prev,
