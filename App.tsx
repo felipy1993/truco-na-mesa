@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 import { GameState, ModalType } from './types';
 import { useAudio } from './hooks/useAudio';
 import { useWakeLock } from './hooks/useWakeLock';
+import { usePWA } from './hooks/usePWA';
 import confetti from 'canvas-confetti';
 import { ScoreCard } from './components/ScoreCard';
 import { TrucoButton } from './components/TrucoButton';
@@ -17,6 +18,7 @@ const INITIAL_STATE: GameState = {
 
 const App: React.FC = () => {
   useWakeLock();
+  const { install, isInstallable } = usePWA();
   const [game, setGame] = useState<GameState>(() => {
     const saved = localStorage.getItem('truco_v1_state');
     return saved ? JSON.parse(saved) : INITIAL_STATE;
@@ -118,6 +120,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Truco na Mesa',
+      text: 'Bora jogar Truco! Marque os pontos com o Truco na Mesa.',
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        speak('Link copiado!');
+        vibrate(50);
+      }
+    } catch (err) {
+      console.log('Error sharing:', err);
+    }
+  };
+
   const activeOpacity = tempHide ? 0.05 : uiOpacity;
 
   return (
@@ -187,6 +208,9 @@ const App: React.FC = () => {
         voices={voices}
         selectedVoice={selectedVoice}
         onSelectVoice={setSelectedVoice}
+        onShare={handleShare}
+        onInstall={install}
+        isInstallable={isInstallable}
         onResetWins={() => {
            setGame(prev => ({...prev, nos: {...prev.nos, wins: 0}, eles: {...prev.eles, wins: 0}})); 
            setIsMenuOpen(false); 

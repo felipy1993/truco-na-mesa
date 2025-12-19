@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Palette, Sliders, Mic } from 'lucide-react';
+import { X, Palette, Sliders, Mic, Share2, Download } from 'lucide-react';
 
 const NEON_COLORS = [
   { name: 'Lima', value: '#bef264' },
@@ -24,6 +24,9 @@ interface SettingsMenuProps {
   voices: SpeechSynthesisVoice[];
   selectedVoice: string;
   onSelectVoice: (voice: string) => void;
+  onShare?: () => void;
+  onInstall?: () => void;
+  isInstallable?: boolean;
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
@@ -31,7 +34,8 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   textColor, setTextColor,
   uiOpacity, setUiOpacity,
   onResetWins, onResetApp,
-  voices, selectedVoice, onSelectVoice
+  voices, selectedVoice, onSelectVoice,
+  onShare, onInstall, isInstallable
 }) => {
   if (!isOpen) return null;
 
@@ -93,6 +97,28 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
                  ))
               )}
             </select>
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest opacity-50">
+              <Share2 size={14} /> Compartilhar App
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={onShare} 
+                className="py-3 bg-white/10 rounded-xl text-xs font-bold uppercase border border-white/10 flex items-center justify-center gap-2 hover:bg-white/20"
+              >
+                <Share2 size={16} /> Enviar
+              </button>
+              {isInstallable && (
+                <button 
+                  onClick={onInstall} 
+                  className="py-3 bg-green-500/20 text-green-400 rounded-xl text-xs font-bold uppercase border border-green-500/20 flex items-center justify-center gap-2 hover:bg-green-500/30"
+                >
+                  <Download size={16} /> Instalar
+                </button>
+              )}
+            </div>
           </section>
 
           <div className="pt-6 space-y-3">
