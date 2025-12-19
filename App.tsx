@@ -30,7 +30,7 @@ const App: React.FC = () => {
   const [tempName, setTempName] = useState('');
   const [tempHide, setTempHide] = useState(false);
 
-  const { isMuted, setIsMuted, playTone, vibrate, initAudio } = useAudio();
+  const { isMuted, setIsMuted, playTone, vibrate, initAudio, speak, voices, selectedVoice, setSelectedVoice } = useAudio();
 
   useEffect(() => {
     localStorage.setItem('truco_v1_state', JSON.stringify(game));
@@ -48,6 +48,7 @@ const App: React.FC = () => {
       if (newPoints >= 12) {
         playTone(880, 0.5, 'triangle');
         vibrate([100, 50, 100]);
+        speak('Vitória!');
         setHandValue(1);
         return {
           ...prev,
@@ -59,6 +60,17 @@ const App: React.FC = () => {
       playTone(delta > 0 ? 440 + (newPoints * 20) : 220, 0.1);
       vibrate();
       if (delta > 0) setHandValue(1);
+
+      // Announce Score
+      const nosPoints = team === 'nos' ? newPoints : prev.nos.points;
+      const elesPoints = team === 'eles' ? newPoints : prev.eles.points;
+      const pn1 = prev.nos.name;
+      const pn2 = prev.eles.name;
+      const p1 = nosPoints === 1 ? 'ponto' : 'pontos';
+      const p2 = elesPoints === 1 ? 'ponto' : 'pontos';
+      
+      speak(`${pn1} ${nosPoints} ${p1}, ${pn2} ${elesPoints} ${p2}`);
+
       return { ...prev, [team]: { ...prev[team], points: newPoints } };
     });
   };
@@ -72,6 +84,7 @@ const App: React.FC = () => {
       setIsTrucoAnimating(true);
       playTone(150, 0.3, 'sawtooth');
       vibrate(80);
+      speak(next === 3 ? 'Truco!' : next === 6 ? 'Seis!' : next === 9 ? 'Nove!' : 'Doze!');
       setTimeout(() => setIsTrucoAnimating(false), 500);
     } else {
       vibrate(20);
@@ -154,6 +167,9 @@ const App: React.FC = () => {
         setTextColor={setTextColor}
         uiOpacity={uiOpacity}
         setUiOpacity={setUiOpacity}
+        voices={voices}
+        selectedVoice={selectedVoice}
+        onSelectVoice={setSelectedVoice}
         onResetWins={() => {
            setGame(prev => ({...prev, nos: {...prev.nos, wins: 0}, eles: {...prev.eles, wins: 0}})); 
            setIsMenuOpen(false); 

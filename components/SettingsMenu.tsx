@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Palette, Sliders } from 'lucide-react';
+import { X, Palette, Sliders, Mic } from 'lucide-react';
 
 const NEON_COLORS = [
   { name: 'Lima', value: '#bef264' },
@@ -21,13 +21,17 @@ interface SettingsMenuProps {
   setUiOpacity: (opacity: number) => void;
   onResetWins: () => void;
   onResetApp: () => void;
+  voices: SpeechSynthesisVoice[];
+  selectedVoice: string;
+  onSelectVoice: (voice: string) => void;
 }
 
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({
   isOpen, onClose,
   textColor, setTextColor,
   uiOpacity, setUiOpacity,
-  onResetWins, onResetApp
+  onResetWins, onResetApp,
+  voices, selectedVoice, onSelectVoice
 }) => {
   if (!isOpen) return null;
 
@@ -65,6 +69,30 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({
               value={uiOpacity} onChange={e => setUiOpacity(parseFloat(e.target.value))}
               className="w-full"
             />
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 mb-4 text-xs font-bold uppercase tracking-widest opacity-50">
+              <Mic size={14} /> Voz do Narrador
+            </div>
+            <select 
+              value={selectedVoice}
+              onChange={(e) => onSelectVoice(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-bold uppercase outline-none focus:border-white/30"
+            >
+              <option value="">Padrão do Sistema</option>
+              {voices.filter(v => v.lang.startsWith('pt')).map(v => (
+                <option key={v.name} value={v.name}>
+                  {v.name.replace('Google', '').replace('Microsoft', '').trim()}
+                </option>
+              ))}
+              {/* Fallback if no PT voices found */}
+              {voices.length > 0 && voices.every(v => !v.lang.startsWith('pt')) && (
+                 voices.map(v => (
+                  <option key={v.name} value={v.name}>{v.name}</option>
+                 ))
+              )}
+            </select>
           </section>
 
           <div className="pt-6 space-y-3">
