@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { GameState, ModalType } from './types';
 import { useAudio } from './hooks/useAudio';
+import { useWakeLock } from './hooks/useWakeLock';
 import { ScoreCard } from './components/ScoreCard';
 import { TrucoButton } from './components/TrucoButton';
 import { SettingsMenu } from './components/SettingsMenu';
@@ -14,6 +15,7 @@ const INITIAL_STATE: GameState = {
 };
 
 const App: React.FC = () => {
+  useWakeLock();
   const [game, setGame] = useState<GameState>(() => {
     const saved = localStorage.getItem('truco_v1_state');
     return saved ? JSON.parse(saved) : INITIAL_STATE;
