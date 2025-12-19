@@ -130,6 +130,10 @@ const App: React.FC = () => {
         <TrucoButton 
           handValue={handValue}
           onToggle={toggleTruco}
+          onCancel={() => {
+            setHandValue(1);
+            vibrate(30);
+          }}
           isAnimating={isTrucoAnimating}
           textColor={textColor}
         />
